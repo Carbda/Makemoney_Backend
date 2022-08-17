@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.backend.makemoney.mapper.WalletMapper">
+
+  <insert id="userWalletDetail">
+    insert into user_wallet_detail(datail_associated_wallet_id, rel_biz_id, type, amount_before,
+                                   amount_after, remark, amount, detail_time)
+    VALUES (#{userId}, #{jobId}, #{type}, #{amountBefore}, #{amountAfter}, #{remark}, #{amount},
+            DATE_FORMAT(now(), '%Y-%m-%d %H:%i:%s'))
+  </insert>
+
+  <!--  用户报名支付押金-->
+  <insert id="insertWithdrawal">
+    insert into user_wallet_apply(fund_user_id, fund_amount, fund_order_id,
+                                  fund_create_time)
+    values (#{userId}, #{money}, DATE_FORMAT(now(), '%Y%m%d%H%i%s'),
+            DATE_FORMAT(now(), '%Y-%m-%d %H:%i:%s'))
+  </insert>
+
+  <insert id="insertWallet">
+    insert into user_wallet(user_wallet_id, associated_user_id)
+    values (#{userId}, #{userId});
+  </insert>
+  <!--  用户钱包流水记录-->
+  <select id="selectWallet" resultType="com.backend.makemoney.entity.Wallet">
+    select user_wallet_id      as userWalletId,
+           associated_user_id  as associatedUserId,
+           total_frozen_amount as totalFrozenAmount,
+           bank_card           as bankCard,
+           total_amount        as totalAmount,
+           pay_password        as passWord
+    from user_wallet
+    where associated_user_id = #{userId}
+  </select>
+  <select id="getRechargeList" resultType="java.util.HashMap">
+    select detail_id                   detailId,
+           datail_associated_wallet_id userId,
+           recharge_type               type,
+           amount,
+           detail_time                 detailTime
+    from user_wallet_detail
+    where type = 1;
+  </select>
+
+  <select id="getWalletDetailList" resultType="java.util.HashMap">
+    select type,
+           amount_before                                 amountBefore,
+           amount_after                                  amountAfter,
+           amount                                        money,
+           rel_biz_id                                    associatedjobId,
+           DATE_FORMAT(detail_time, '%Y-%m-%d %H:%i:%s') time,
+           remark
+    from user_wallet_detail
+    where datail_associated_wallet_id = #{userId}
+    Order by time desc
+  </select>
+
+  <!--  设置支付密码-->
+  <select id="getWalletAmount" resultType="java.util.HashMap">
+    select total_amount                                                 amount,
+           total_frozen_amount                                          frozenAmount,
+           (select -SUM(amount)
+            from user_wallet_detail
+            where datail_associated_wallet_id = #{userId}
+              and type = 2)                                             totalWithdrawalAmount,
+           (select SUM(amount)
+            from user_wallet_detail
+            where datail_associated_wallet_id = #{userId} and type = 1) totalChargeAmount
+    from user_wallet
+    where associated_user_id = #{userId}
+
+  </select>
+
+  <!--  充值记录查看-->
+  <update id="userDeposit">
+    UPDATE user_wallet
+    SET total_amount=total_amount - 50,
+        total_frozen_amount=total_frozen_amount + 50
+    where associated_user_id = #{userId};
+  </update>
+
+  <update id="walletPay">
+    UPDATE user_wallet
+    SET total_amount=total_amount - #{money}
+    where associated_user_id = #{userId}
+  </update>
+
+  <update id="updateRecharge">
+    update user_wallet
+    set total_amount=total_amount + #{money}
+    where associated_user_id = #{userId}
+  </update>
+  <update id="setPayPassword">
+    update user_wallet
+    set pay_password =#{newPayPassword}
+    where associated_user_id = #{userId}
+  </update>
+  <update id="addWallet">
+    update user_wallet
+    set total_amount=total_amount + #{amount}
+    where associated_user_id = #{userId}
+  </update>
+  <update id="getDeposit">
+    update user_wallet
+    set total_frozen_amount=total_frozen_amount - #{amount},
+        total_amount=total_amount + #{amount}
+    where associated_user_id = #{userId}
+  </update>
+</mapper>

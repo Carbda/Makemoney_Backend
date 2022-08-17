@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.backend.makemoney.mapper.AdvertiseMapper">
+
+  <!--  获得广告列表-->
+  <delete id="deleteAd" parameterType="string">
+    delete
+    from t_ad
+    where t_ad.ad_id = #{adId}
+  </delete>
+  <!--  添加广告-->
+  <insert id="insertAdvertise">
+    insert into t_ad(ad_create_time, ad_name, ad_associated_job_id, ad_location, ad_start_time,
+                     ad_end_time, ad_image,
+                     ad_remark,ad_status)
+    VALUES (DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s'), #{adName}, #{associatedJob}, #{adLocation},
+            #{adStartTime},
+            #{adEndTime}, #{adImage}, #{adRemark},#{adStatus})
+  </insert>
+
+  <!--  编辑广告-->
+  <select id="getAdSum" parameterType="string" resultType="integer">
+    select COUNT(*)
+    from t_ad
+    <where>
+
+      <if test="adId !=null and adId != '' ">
+        AND ad_id like concat('%',#{adId},'%')
+      </if>
+      <if test="adName !=null and adName != '' ">
+        AND ad_name like concat('%', #{adName}, '%')
+      </if>
+      <if test="associatedJob != null and associatedJob != ''">
+        AND ad_associated_job_id like concat(#{associatedJob}, '%')
+      </if>
+      <if test="adLocation !=null and adLocation != '' ">
+        AND ad_location = #{adLocation}
+      </if>
+      <if test="adEndTime !=null and adEndTime != '' ">
+        AND ad_end_time &lt; #{adEndTime}
+      </if>
+      <if test="adStatus !=null and adStatus != '' ">
+        AND ad_status = #{adStatus}
+      </if>
+
+    </where>
+  </select>
+  <select id="getAdvertise" resultType="java.util.HashMap">
+    SELECT ad_id adId,
+    ad_name adName,
+    ad_image adImage,
+    DATE_FORMAT(ad_start_time, '%Y-%m-%d %H:%i:%s') adStartTime,
+    DATE_FORMAT(ad_end_time, '%Y-%m-%d %H:%i:%s') adEndTime,
+    ad_associated_job_id associatedJob,
+    ad_status adStatus,
+    ad_clicks adClicks,
+    ad_location adLocation,
+    ad_remark adRemark
+    from t_ad
+    <where>
+      <if test="adId !=null and adId != '' ">
+        AND ad_id like concat('%', #{adId}, '%')
+      </if>
+      <if test="adName !=null and adName != '' ">
+        AND ad_name like concat('%', #{adName}, '%')
+      </if>
+      <if test="associatedJob != null and associatedJob != ''">
+        AND ad_associated_job_id like concat(#{associatedJob}, '%')
+      </if>
+      <if test="adLocation !=null and adLocation != '' ">
+        AND ad_location = #{adLocation}
+      </if>
+      <if test="adEndTime !=null and adEndTime != '' ">
+        AND ad_end_time &lt; #{adEndTime}
+      </if>
+      <if test="adStatus !=null and adStatus != '' ">
+        and ad_status = #{adStatus}
+      </if>
+    </where>
+
+    limit #{pageNum},#{pageSize}
+  </select>
+
+  <update id="updateAdvertise">
+    update t_ad
+    set ad_name=#{adName},
+        ad_location=#{adLocation},
+        ad_start_time=#{adStartTime},
+        ad_end_time=#{adEndTime},
+        ad_image=#{adImage},
+        ad_remark=#{adRemark},
+        ad_status=#{adStatus},
+        ad_associated_job_id=#{associatedJob}
+    where ad_id = #{adId}
+  </update>
+
+  <update id="updateAdvertiseNoImage">
+    update t_ad
+    set ad_name=#{adName},
+        ad_location=#{adLocation},
+        ad_start_time=#{adStartTime},
+        ad_end_time=#{adEndTime},
+        ad_remark=#{adRemark},
+        ad_status=#{adStatus},
+        ad_associated_job_id=#{associatedJob}
+    where ad_id = #{adId}
+  </update>
+</mapper>

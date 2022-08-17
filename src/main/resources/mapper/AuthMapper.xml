@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.backend.makemoney.mapper.AuthMapper">
+
+  <!--  创建审核单-->
+  <insert id="insertAuthOrder">
+    insert into job_audit(job_id, type)
+    values (#{jobId}, #{type})
+  </insert>
+  <!--  用户实名认证-->
+  <insert id="insertRealAuth">
+    insert into user_real_authentication(user_real_auth_time, user_real_assosiated_user_id,
+                                         user_id_card_front, user_id_card_back, user_id_card_number,
+                                         user_face_img, user_real_auth_name)
+    values (DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s'), #{userId}, #{cardFront}, #{cardBack},
+            #{cardNumber}, #{faceImage}, #{realName})
+  </insert>
+  <insert id="insertCompanyInfo" parameterType="java.util.HashMap">
+    insert into user_enterprise_certification(id, user_id,
+                                              legal_card_front, legal_card_back, user_card_front,
+                                              user_card_back, license, user_face_img,
+                                              enterprise_name, enterprise_style, enterprise_addr,
+                                              enterprise_legal_people,
+                                              enterprise_registered_capital,
+                                              enterprise_incorporation, enterprise_business_term,
+                                              enterprise_business_scope,
+                                              create_time)
+    values (#{companyOrderId}, #{userId}, #{legalCardFront}, #{legalCardBack},
+            #{cardFront}, #{cardBack}, #{companyLicense}, #{faceImage}, #{companyName},
+            #{companyStyle}, #{companyAddress},
+            #{legalPeople}, #{registeredCapital}, #{incorporation}, #{businessTerm},
+            #{businessScope}, DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s'))
+  </insert>
+  <!--  审核兼职订单操作-->
+  <insert id="insertCompanyAuth">
+    REPLACE into enterprise_order(enterprise_order_id)
+    VALUES (#{companyOrderId})
+  </insert>
+  <select id="selectWithdrawal" resultType="java.util.HashMap">
+    select fund_amount                                        as amount,
+           fund_user_id                                       as userId,
+           fund_account                                       as account,
+           fund_order_id                                      as orderId,
+           fund_type                                          as type,
+           fund_audit_status                                  as auditStatus,
+
+           DATE_FORMAT(fund_create_time, '%Y-%m-%d %H:%i:%s') as createTime
+    from user_wallet_apply
+    order by createTime
+  </select>
+  <!--  提现申请结果-->
+  <select id="resultWithdraw" resultType="java.util.HashMap">
+    select DATE_FORMAT(fund_create_time, '%Y-%m-%d %H:%i:%s') reflectTime,
+           fund_amount                                        money,
+           fund_audit_status                                  status
+    from user_wallet_apply
+    where fund_user_id = #{userId}
+  </select>
+  <select id="selectWithdrawalById" resultType="java.util.HashMap">
+    select fund_order_id                                      orderId,
+           fund_amount                                        amount,
+           fund_account                                       account,
+           fund_type                                          type,
+           DATE_FORMAT(fund_create_time, '%Y-%m-%d %H:%i:%s') createTime,
+           fund_audit_status                                  auditStatus,
+           DATE_FORMAT(fund_audit_time, '%Y-%m-%d %H:%i:%s')  auditTime,
+           fund_audit_remark                                  auditRemark
+    from user_wallet_apply
+    where fund_order_id = #{orderId}
+  </select>
+  <select id="selectAuthInfomation" resultType="java.util.HashMap">
+    select fund_audit_status                                 auditStatus,
+           fund_audit_remark                                 auditRemark,
+           fund_reviewer                                     auditReviewer,
+           DATE_FORMAT(fund_audit_time, '%Y-%m-%d %H:%i:%s') auditTime
+    from user_wallet_apply
+    where fund_order_id = #{orderId}
+  </select>
+
+  <select id="recentCapitalFlowById" resultType="java.util.HashMap">
+    select DATE_FORMAT(detail_time, '%Y-%m-%d %H:%i:%s') detailTime,
+           type,
+           amount,
+           amount_after                                  amountAfter
+    from user_wallet_detail
+    where datail_associated_wallet_id = #{userId}
+  </select>
+  <select id="selectCompanyAuth" resultType="java.util.HashMap">
+    select o.id              enterpriseOrder,
+           u.user_id userId,
+           o.enterprise_name enterpriseName,
+           DATE_FORMAT(o.create_time, '%Y-%m-%d %H:%i:%s')     createTime,
+           u.user_nick_name  userNickName,
+           (CASE
+              WHEN worker_growth_value &lt; 101 THEN 'lv1'
+              WHEN (worker_growth_value > 100
+                AND worker_growth_value &lt; 201) THEN 'lv2'
+              WHEN (worker_growth_value > 200
+                AND worker_growth_value &lt; 301) THEN 'lv3'
+              WHEN (worker_growth_value > 300
+                AND worker_growth_value &lt; 401) THEN 'lv4'
+              WHEN (worker_growth_value > 400
+                AND worker_growth_value &lt; 501) THEN 'lv5'
+              WHEN (worker_growth_value > 500
+                AND worker_growth_value &lt; 601) THEN 'lv6'
+              WHEN (worker_growth_value > 600
+                ) THEN
+                'lv7'
+             END) as         level,
+           e.enterprise_audit_status auditStatus
+    from user_enterprise_certification o,
+         enterprise_order e,
+         user u
+    where u.user_id = o.user_id and e.enterprise_order_id=o.id and e.enterprise_audit_status =2
+  </select>
+  <select id="selectCompanyAuthInfo" resultType="java.util.HashMap">
+    select enterprise_name enterpriseName,
+           enterprise_style enterpriseStyle,
+           enterprise_addr enterpriseAddr,
+           enterprise_legal_people enterpriseLegalPeople,
+           enterprise_registered_capital enterpriseRegisteredCapital,
+           enterprise_incorporation  enterpriseIncorporation,
+           enterprise_business_term enterpriseBusinessTerm,
+           enterprise_business_scope enterpriseBusinessScope,
+           user_card_front userCardFront,
+           user_card_back userCardBack,
+           legal_card_front legalCardFront,
+           legal_card_back legalCardBack,
+           license from user_enterprise_certification where id = #{enterpriseOrder}
+  </select>
+  <update id="updateCompanyAuth">
+    update enterprise_order
+    set enterprise_reviewer=#{reviewer},
+        enterprise_audit_status=#{auditStatus},
+        enterprise_audit_remark=#{auditRemark},
+        enterprise_audit_time=DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s')
+    where enterprise_order_id=#{companyOrderId}
+  </update>
+  <update id="submitWithdrawalAudit">
+    update user_wallet_apply
+    set fund_audit_status=#{auditStatus},
+        fund_audit_remark=#{auditRemark},
+        fund_reviewer=#{auditReviewer}
+    where fund_order_id = #{orderId}
+  </update>
+  <update id="updateRealAuth">
+    update user
+    set user_real_name_auth=1
+    where user_id = #{userId}
+  </update>
+  <update id="examinePartOrder" parameterType="string">
+    update job_audit,part_time_job
+    set check_status=#{checkStatus},
+        `status`=#{checkStatus},
+        check_time  = now(),
+        checkPeople = #{checkPeople},
+        checkRemark = #{checkRemark},
+        percentage  = #{percentage},
+        label       =#{label}
+    where job_audit.job_id = #{jobId}
+      and part_time_job.job_id = #{jobId}
+  </update>
+  <update id="updateUserCompanyAuth">
+    update user set user_type = 1 , user_Enterprise_certification=1 where user_id=#{userId}
+  </update>
+  <update id="updateUserCompanyAuth2">
+    update user set user_Enterprise_certification=2 where user_id=#{userId}
+  </update>
+</mapper>

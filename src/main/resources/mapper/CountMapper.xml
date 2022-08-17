@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.backend.makemoney.mapper.CountMapper">
+  <!--  有效劳工数量-->
+  <select id="selectWokerNum" resultType="int">
+    select count(*) total from (select user_id userId,
+    user_nick_name userNickName,
+    (select COUNT(t_job_apply_user_id)
+    from t_job_apply
+    WHERE going_status = 2
+    AND userId = t_job_apply_user_id
+    <if test="startTime !=null and startTime != '' ">
+      AND t_job_apply_user_update_time > #{startTime}
+    </if>
+    <if test="endTime !=null and endTime !='' ">
+      AND t_job_apply_user_update_time &lt; #{endTime}
+    </if>
+    ) userFinishJobCount ,
+    ifNull((select SUM(amount)
+    from user_wallet_detail
+    WHERE type = 4 AND user_id = datail_associated_wallet_id
+    <if test="startTime !=null and startTime !='' ">
+      AND detail_time > #{startTime}
+    </if>
+    <if test="endTime !=null and endTime !='' ">
+      AND detail_time &lt; #{endTime}
+    </if>),0) totalWages
+    from user having userFinishJobCount > 0 or totalWages>0) a
+  </select>
+  <!--  有效招聘方数量-->
+  <select id="selectEmployerNum" resultType="int">
+    select COUNT(*) total from(
+    select user_id userId,
+    user_nick_name userNickName,
+    (select COUNT(p.user_id)
+    from part_time_job p
+    WHERE p.status > 0
+    AND p.user_id = userId
+    <if test="startTime !=null and startTime != '' ">
+      AND p.create_time > #{startTime}
+    </if>
+    <if test="endTime !=null and endTime !='' ">
+      AND p.create_time &lt; #{endTime}
+    </if>
+    ) totalJobOrder,
+    ifnull((select SUM(amount)
+    from user_wallet_detail
+    WHERE type = 3 AND user_id = datail_associated_wallet_id
+    <if test="startTime !=null and startTime !='' ">
+      AND detail_time > #{startTime}
+    </if>
+    <if test="endTime !=null and endTime !='' ">
+      AND detail_time &lt; #{endTime}
+    </if>),0) totalPays
+    from user having totalJobOrder>0 or totalPays >0
+    ) a;
+  </select>
+  <!--  劳工排行-->
+  <!--suppress SqlResolve -->
+  <select id="workerRanking" resultType="java.util.HashMap">
+    select user_id userId,
+    user_nick_name userNickName,
+    (select COUNT(t_job_apply_user_id)
+    from t_job_apply
+    WHERE going_status = 2
+    AND userId = t_job_apply_user_id
+    <if test="startTime !=null and startTime != '' ">
+      AND t_job_apply_user_update_time > #{startTime}
+    </if>
+    <if test="endTime !=null and endTime !='' ">
+      AND t_job_apply_user_update_time &lt; #{endTime}
+    </if>
+    ) userFinishJobCount ,
+    ifNull((select SUM(amount)
+    from user_wallet_detail
+    WHERE type = 4 AND user_id = datail_associated_wallet_id
+    <if test="startTime !=null and startTime !='' ">
+      AND detail_time > #{startTime}
+    </if>
+    <if test="endTime !=null and endTime !='' ">
+      AND detail_time &lt; #{endTime}
+    </if>),0) totalWages
+    from user having userFinishJobCount > 0 or totalWages>0
+    order by totalWages desc
+  </select>
+  <!--  招聘方排行-->
+  <select id="employerRanking" resultType="java.util.HashMap">
+    select user_id userId,
+    user_nick_name userNickName,
+    (select COUNT(p.user_id)
+    from part_time_job p
+    WHERE p.status > 0
+    AND p.user_id = userId
+    <if test="startTime !=null and startTime != '' ">
+      AND p.create_time > #{startTime}
+    </if>
+    <if test="endTime !=null and endTime !='' ">
+      AND p.create_time &lt; #{endTime}
+    </if>
+    ) totalJobOrder,
+    ifnull((select SUM(amount)
+    from user_wallet_detail
+    WHERE type = 3 AND user_id = datail_associated_wallet_id
+    <if test="startTime !=null and startTime !='' ">
+      AND detail_time > #{startTime}
+    </if>
+    <if test="endTime !=null and endTime !='' ">
+      AND detail_time &lt; #{endTime}
+    </if>),0) totalPays
+    from user having totalJobOrder>0 or totalPays >0 order by totalPays desc
+  </select>
+  <select id="countFinishOrderBeforeDay" resultType="int">
+    SELECT count(job_id) FROM part_time_job WHERE TO_DAYS(#{date})-TO_DAYS(create_time) =#{beforeDay} and status=3;
+  </select>
+  <select id="countFinishOrderPayBeforeDay" resultType="double">
+    SELECT ifnull(sum(amount),0) FROM part_time_job WHERE TO_DAYS(#{date})-TO_DAYS(create_time) =#{beforeDay} and status=3;
+  </select>
+  <select id="selectWorkerNumBeforeDay" resultType="int">
+    select ifnull(count(*),0) from t_job_apply WHERE TO_DAYS(#{date})-TO_DAYS(t_job_apply_create_time) =#{beforeDay} and t_job_apply_audit_status=1;
+  </select>
+  <select id="selectEmployerNumBeforeDay" resultType="int">
+    select ifnull(count(*),0) from job_audit WHERE TO_DAYS(#{date})-TO_DAYS(check_time) =#{beforeDay} and check_status=1;
+  </select>
+  <select id="countWithdrawalBeforeDay" resultType="double">
+    SELECT ifnull(sum(amount),0) FROM user_wallet_detail WHERE TO_DAYS(#{date})-TO_DAYS(detail_time) =#{beforeDay} and type=2;
+  </select>
+  <select id="countWithdrawalNumBeforeDay" resultType="int">
+    SELECT ifnull(count(detail_id),0) FROM user_wallet_detail WHERE TO_DAYS(#{date})-TO_DAYS(detail_time) =#{beforeDay} and type=2;
+  </select>
+  <select id="countRechargeBeforeDay" resultType="double">
+    SELECT ifnull(sum(amount),0) FROM user_wallet_detail WHERE TO_DAYS(#{date})-TO_DAYS(detail_time) =#{beforeDay} and type=1;
+  </select>
+  <select id="countRechargeNumBeforeDay" resultType="int">
+    SELECT ifnull(count(detail_id),0) FROM user_wallet_detail WHERE TO_DAYS(#{date})-TO_DAYS(detail_time) =#{beforeDay} and type=1;
+  </select>
+  <select id="countRegisterUserBeforeDay" resultType="int">
+    select ifnull(count(user_id),0) from user where TO_DAYS(#{date})-TO_DAYS(user_create_time) =#{beforeDay}
+  </select>
+  <select id="countEmployerUserBeforeDay" resultType="int">
+    select ifnull(count(enterprise_order_id),0) from enterprise_order where TO_DAYS(#{date})-TO_DAYS(enterprise_audit_time) =#{beforeDay} and enterprise_audit_status=1
+  </select>
+</mapper>

@@ -1,0 +1,513 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.backend.makemoney.mapper.OrderMapper">
+  <delete id="cancelOrder">
+    delete
+    from t_job_apply
+    where t_job_apply_user_id = #{userId}
+      and t_job_apply_job_id = #{jobId}
+  </delete>
+  <insert id="insertJobApply">
+    insert into t_job_apply(t_job_apply_user_id, t_job_apply_job_id, t_job_apply_create_time,
+                            t_job_apply_audit_status, t_job_apply_audit_message,
+                            t_job_apply_role_type, t_job_apply_deposit)
+    values (#{userId}, #{jobId}, DATE_FORMAT(now(), '%Y-%m-%d %H:%i:%s'), #{status},
+            #{auditMessage}, #{type}, 50)
+  </insert>
+  <!-- 订单管理-审核通过的兼职订单-->
+  <insert id="insertPartOrder" keyProperty="id"
+    parameterType="com.backend.makemoney.entity.PartOrder" useGeneratedKeys="true">
+    insert into part_time_job(id, job_id, user_id, name, `describe`, remark, recruits_number,
+                              sex_requirement, height_requirement, age_requirement, work_start_time,
+                              work_end_time,
+                              gather_time, wages, team_leader_number, is_exammine, address,
+                              team_leader_requirement, status, create_time, environment_img)
+    values (id, #{jobId}, #{userId}, #{name}, #{describe}, #{remark}, #{recruitsNumber},
+            #{sexRequirement},
+            #{heightRequirement}, #{ageRequirement}, #{workStartTime}, #{workEndTime},
+            #{gatherTime}, #{wages}, #{teamLeaderNumber}, #{isExammine}, #{address},
+            #{teamLeaderRequirement}, #{status}, #{createTime}, #{environmentImg})
+  </insert>
+  <!--  获取兼职审核列表-->
+  <resultMap id="partOrderInfo" type="com.backend.makemoney.entity.PartOrder">
+    <result column="id" property="id"/>
+    <result column="job_id" property="jobId"/>
+    <result column="user_id" property="userId"/>
+    <result column="name" property="name"/>
+    <result column="recruits_number" property="recruitsNumber"/>
+    <result column="sex_requirement" property="sexRequirement"/>
+    <result column="height_requirement" property="heightRequirement"/>
+    <result column="age_requirement" property="ageRequirement"/>
+    <result column="work_end_time" property="workEndTime"/>
+    <result column="work_start_time" property="workStartTime"/>
+    <result column="gather_time" property="gatherTime"/>
+    <result column="wages" property="wages"/>
+    <result column="team_leader_number" property="teamLeaderNumber"/>
+    <result column="is_exammine" property="isExammine"/>
+    <result column="team_leader_requirement" property="teamLeaderRequirement"/>
+    <result column="describe" property="describe"/>
+    <result column="environment_img" property="environmentImg"/>
+    <result column="status" property="status"/>
+    <result column="amount" property="amount"/>
+    <result column="application" property="application"/>
+    <result column="watch_number" property="watchNumber"/>
+    <result column="worker_number" property="workerNumber"/>
+    <result column="remark" property="remark"/>
+    <result column="total_team_leader_number" property="totalTeamLeaderNumber"/>
+    <result column="team_leader_wages" property="teamLeaderWages"/>
+    <result column="create_time" property="createTime"/>
+    <result column="update_time" property="updateTime"/>
+    <result column="address" property="address"/>
+    <result column="label" property="label"/>
+  </resultMap>
+  <!--  获取全职审核列表-->
+  <select id="findAll" resultType="com.backend.makemoney.entity.PartOrder">
+    select *
+    from part_time_job
+  </select>
+  <!--  APP获取轮播图 -->
+  <select id="selectOnPartOrder" resultType="java.util.HashMap">
+    select job_id                                        as jobId,
+           name                                          as title,
+           DATE_FORMAT(create_time, '%Y-%m-%d %H:%i:%s') as publishTime,
+           wages,
+           application,
+           total_team_leader_number                      as totalTeamLeaderNumber,
+           worker_number                                 as workerNum,
+           status
+    from part_time_job
+    where status > 0
+    order by status
+  </select>
+  <!--  APP获取招聘方首页发单列表-->
+  <select id="selectPartOrderAuthList" resultType="com.backend.makemoney.entity.vo.OrderAuthList">
+    select part_time_job.job_id as jobId,
+           name                 as name,
+           create_time          as createTime,
+           user_type            as userType,
+           recruits_number      as recruitsNumber,
+           wages
+    from part_time_job,
+         user,
+         job_audit
+    where user.user_id = part_time_job.user_id
+      and job_audit.job_id = part_time_job.job_id
+      and job_audit.check_status = 0;
+  </select>
+  <!--  APP获取劳工首页订单列表-->
+  <select id="selectFullOrderAuthList" resultType="com.backend.makemoney.entity.vo.OrderAuthList">
+    select job_id         as jobId,
+           name           as name,
+           create_time    as createTime,
+           user_type      as userType,
+           require_number as recruitsNumber,
+           wages
+    from full_time_job as f,
+         user as u
+    where u.user_id = f.user_id
+  </select>
+  <!--  推荐订单-兼职单 -->
+  <select id="selectAdvertise" resultType="java.util.HashMap">
+    select ad_id                as adId,
+           ad_name              as name,
+           ad_remark            as msg,
+           ad_image             as url,
+           ad_associated_job_id as jobId
+    from t_ad
+    where ad_status = 1
+    order by ad_location desc
+  </select>
+  <!--  下架兼职订单-->
+  <select id="selectEmployerIndex" resultType="java.util.HashMap">
+    select job_id                                            as id,
+           name                                              as title,
+           address                                           as location,
+           DATE_FORMAT(work_start_time, '%Y-%m-%d %H:%i:%s') as workStartTime,
+           DATE_FORMAT(work_end_time, '%Y-%m-%d %H:%i:%s')   as workEndTime,
+           DATE_FORMAT(create_time, '%Y-%m-%d %H:%i:%s')     as publishTime,
+           label                                             as category,
+           wages,
+           status,
+           worker_number                                        workerNum,
+           total_team_leader_number                             leaderNum,
+           environment_img                                      environmentImg,
+           amount
+    from part_time_job
+    where user_id = #{userId};
+  </select>
+  <!--  获取报名信息-->
+  <select id="selectWorkerIndex" resultType="java.util.HashMap">
+    select job_id                                            as id,
+           name                                              as title,
+           address                                           as location,
+           DATE_FORMAT(work_start_time, '%Y-%m-%d %H:%i:%s') as workStartTime,
+           DATE_FORMAT(work_end_time, '%Y-%m-%d %H:%i:%s')   as workEndTime,
+           DATE_FORMAT(update_time, '%Y-%m-%d %H:%i:%s')     as publishTime,
+           label                                             as category,
+           wages,
+           status
+    from part_time_job
+    where status = 1 limit #{pageNum}
+        , 10;
+  </select>
+  <!-- 添加报名信息 -->
+  <select id="selectRecommendPartOrder" resultType="java.util.HashMap">
+    select job_id                                            as id,
+           name                                              as title,
+           address                                           as location,
+           DATE_FORMAT(work_start_time, '%Y-%m-%d %H:%i:%s') as workStartTime,
+           DATE_FORMAT(work_end_time, '%Y-%m-%d %H:%i:%s')   as workEndTime,
+           DATE_FORMAT(create_time, '%Y-%m-%d %H:%i:%s')     as publishTime,
+           label                                             as category,
+           wages,
+           status
+    from part_time_job
+    where status = 1
+      and part_time_job.label LIKE concat('%', #{label}, '%') limit #{pageNum}
+        , 10
+  </select>
+  <!--  兼职订单详情-->
+  <select id="selectUserApply" resultType="java.util.HashMap">
+    select DATE_FORMAT(t_job_apply_create_time, '%Y-%m-%d %H:%i:%s') as applyTime,
+           t_job_apply_audit_status                                  as auditStatus,
+           t_job_apply_audit_message                                 as auditMessage,
+           DATE_FORMAT(t_job_apply_audit_time, '%Y-%m-%d %H:%i:%s')  as auditTime,
+           t_job_apply_role_type                                     as roleType,
+           t_job_apply_toll                                          as toll,
+           t_job_apply_salary                                        as salary,
+           t_job_apply_deposit                                       as deposit,
+           going_status                                              as goingStatus,
+           status
+    from t_job_apply
+    where t_job_apply_user_id = #{userId}
+      and t_job_apply_job_id = #{jobId}
+  </select>
+  <!--  审核兼职订单详情-->
+  <select id="selectPartOrder" resultMap="partOrderInfo">
+    select *
+    from part_time_job
+    where job_id = #{jobId}
+  </select>
+  <!--  创建兼职订单-->
+  <select id="selectAuthPartOrder" resultType="java.util.HashMap">
+    select name,
+           wages,
+           user_nick_name                                    as userNickName,
+           address,
+           DATE_FORMAT(work_start_time, '%Y-%m-%d %H:%i:%s') as workStartTime,
+           DATE_FORMAT(work_end_time, '%Y-%m-%d %H:%i:%s')   as workEndTime,
+           `describe`,
+           environment_img                                   as environmentImg,
+           recruits_number                                   as recruitsNumber,
+           team_leader_number                                as teamLeaderNumber,
+           recruits_number                                   as recruitsNumber
+    from part_time_job,
+         user
+    where user.user_id = part_time_job.user_id
+      and job_id = #{jobId}
+
+  </select>
+  <!--  劳工工作台-->
+  <select id="selectWorkerOrder" resultType="java.util.HashMap">
+    select job_id                                            as id,
+           name                                              as title,
+           DATE_FORMAT(work_start_time, '%Y-%m-%d %H:%i:%s') as startTime,
+           environment_img                                   as img,
+           DATE_FORMAT(work_end_time, '%Y-%m-%d %H:%i:%s')   as endTime,
+           DATE_FORMAT(create_time, '%Y-%m-%d %H:%i:%s')     as publishTime,
+           wages                                             as salary,
+           t_job_apply.status                                as status,
+           going_status                                      as gongStatus,
+           t_job_apply_audit_status                          as audit
+    from part_time_job,
+         t_job_apply
+    where t_job_apply_job_id = job_id
+      and t_job_apply_user_id = #{userId}
+  </select>
+  <!--  招聘方工作台-->
+  <select id="selectEmployerOrder" resultType="java.util.HashMap">
+    select job_id                                            as id,
+           name                                              as title,
+           environment_img                                   as img,
+           DATE_FORMAT(work_start_time, '%Y-%m-%d %H:%i:%s') as startTime,
+           DATE_FORMAT(work_end_time, '%Y-%m-%d %H:%i:%s')   as endTime,
+           DATE_FORMAT(create_time, '%Y-%m-%d %H:%i:%s')     as publishTime,
+           wages                                             as salary,
+           status                                            as status,
+           worker_number                                        workerNum,
+           total_team_leader_number                             leaderNum,
+           amount
+    from part_time_job
+    where user_id = #{userId}
+  </select>
+
+  <!--  下架订单-->
+  <select id="selectOrderById" resultType="java.util.HashMap">
+    select *
+    from part_time_job
+    where job_id = #{jobId};
+  </select>
+
+  <select id="selectOrderApply" resultType="java.util.HashMap">
+    select t_job_apply_user_id      userId,
+           user_nick_name           nickName,
+           t_job_apply_audit_status auditStatus,
+           t_job_apply_role_type    type,
+           user_avatar              avatar
+    from t_job_apply,
+         user
+    where t_job_apply_job_id = #{jobId}
+      and t_job_apply_user_id = user_id
+  </select>
+
+  <select id="selectEmployer" resultType="java.util.HashMap">
+    select u.user_id userId, u.user_avatar userAvatar, u.user_nick_name userNickName
+    from user u,
+         part_time_job p
+    where p.job_id = #{jobId}
+      and u.user_id = p.user_id
+  </select>
+
+  <select id="selectTaskPartOrder" resultType="java.util.HashMap">
+    select job_id                                            jobId,
+           DATE_FORMAT(work_start_time, '%Y-%m-%d %H:%i:%s') startTime,
+           DATE_FORMAT(work_end_time, '%Y-%m-%d %H:%i:%s')   endTime,
+           status,
+           worker_number                                     workerNum,
+           application                                       applyNum,
+           recruits_number                                   recruitsNum
+    from part_time_job
+    where status = 1;
+  </select>
+  <select id="selectTaskPartOrderByJobId" resultType="java.util.HashMap">
+    select job_id                                            jobId,
+           DATE_FORMAT(work_start_time, '%Y-%m-%d %H:%i:%s') startTime,
+           DATE_FORMAT(work_end_time, '%Y-%m-%d %H:%i:%s')   endTime,
+           status,
+           worker_number                                     workerNum,
+           application                                       applyNum,
+           total_team_leader_number                          leaderNum,
+           team_leader_number                                leaderNeed
+    from part_time_job
+    where job_id = #{jobId};
+  </select>
+  <select id="selectBeginPartOrders" resultType="java.util.HashMap">
+    select job_id                                            jobId
+         , DATE_FORMAT(work_start_time, '%Y-%m-%d %H:%i:%s') startTime
+         , DATE_FORMAT(work_end_time, '%Y-%m-%d %H:%i:%s')   endTime
+         , status
+         , team_leader_wages                                 leaderWages
+         , wages                                             wages
+         , worker_number                                     workerNum
+         , application                                       applyNum
+         , recruits_number                                   recruitsNum
+    from part_time_job
+    where status = 2;
+  </select>
+
+  <select id="selectPartOrderWorkers" resultType="java.util.HashMap">
+    select t_job_apply_user_id      userId,
+           t_job_apply_job_id       jobId,
+           t_job_apply_role_type    roleType,
+           t_job_apply_salary       salary,
+           t_job_apply_deposit      deposit,
+           going_status             signStatus,
+           t_job_apply_audit_status auditStatus
+    from t_job_apply
+    where t_job_apply_job_id = #{jobId}
+  </select>
+  <select id="selectOrderHeader" resultType="java.util.HashMap">
+    select p.job_id                                            jobId,
+           p.name                                              jobName,
+           p.worker_number                                     workerNum,
+           p.recruits_number                                   workerNeed,
+           DATE_FORMAT(p.create_time, '%Y-%m-%d %H:%i:%s')     publishTime,
+           p.status,
+           p.total_team_leader_number                          leaderNum,
+           p.team_leader_number                                leaderNeed,
+           p.wages                                             workerWages,
+           p.team_leader_wages                                 leaderWages,
+           DATE_FORMAT(p.work_start_time, '%Y-%m-%d %H:%i:%s') startTime,
+           DATE_FORMAT(p.work_end_time, '%Y-%m-%d %H:%i:%s')   endTime,
+           p.application,
+           a.percentage                                        percentage,
+           u.user_nick_name                                    userNickName,
+           p.address                                           address,
+           p.`describe`                                        jobDescribe,
+           p.environment_img                                   environmentImg
+    from part_time_job p,
+         job_audit a,
+         user u
+    where p.job_id = #{jobId}
+      and p.user_id = u.user_id
+      and a.job_id = p.job_id
+  </select>
+  <select id="selectOrderApplyInfo" resultType="java.util.HashMap">
+    select u.user_id                                                   userId,
+           u.user_nick_name                                            userNickName,
+           t.t_job_apply_role_type                                     applyType,
+           DATE_FORMAT(t.t_job_apply_create_time, '%Y-%m-%d %H:%i:%s') applyTime,
+           t.t_job_apply_audit_status                                  status
+    from user u,
+         t_job_apply t
+    where t.t_job_apply_job_id = #{jobId}
+      and u.user_id = t.t_job_apply_user_id
+  </select>
+  <select id="selectOrderPayInfo" resultType="java.util.HashMap">
+    select u.user_id                                                        userId,
+           u.user_nick_name                                                 userNickName,
+           t.t_job_apply_salary                                             salary,
+           t.t_job_apply_role_type                                          roleType,
+           DATE_FORMAT(t.t_job_apply_user_update_time, '%Y-%m-%d %H:%i:%s') getPayTime
+    from user u,
+         t_job_apply t
+    where t.t_job_apply_job_id = #{jobId}
+      and u.user_id = t.t_job_apply_user_id
+      and t.t_job_apply_audit_status = 1
+      and t.status = 4
+  </select>
+  <select id="selectOrderWorkerInfo" resultType="java.util.HashMap">
+    select u.user_id                                                           userId,
+           u.user_nick_name                                                    userNickName,
+           t.t_job_apply_role_type                                             roleType,
+           ifnull(DATE_FORMAT(t.t_job_apply_sign_in, '%Y-%m-%d %H:%i:%s'), 0)  signInTime,
+           ifnull(DATE_FORMAT(t.t_job_apply_sign_out, '%Y-%m-%d %H:%i:%s'), 0) signOutTime,
+           DATE_FORMAT(t.t_job_apply_create_time, '%Y-%m-%d %H:%i:%s')         applyTime,
+           t.t_job_apply_audit_status                                          status,
+           t_job_apply_salary                                                  salary
+    from user u,
+         t_job_apply t
+    where t.t_job_apply_job_id = #{jobId}
+      and u.user_id = t.t_job_apply_user_id
+      and t.t_job_apply_audit_status = 1
+  </select>
+  <select id="countOrderApply" resultType="java.util.HashMap">
+    select count(t_job_apply_user_id)                                       applyNum
+         , sum(CASE WHEN t_job_apply_audit_status = 1 THEN 1 ELSE 0 END) AS workerNum
+         , sum(CASE WHEN t_job_apply_audit_status = 0 THEN 1 ELSE 0 END) as auditNum
+         , sum(CASE
+                 WHEN t_job_apply_audit_status = 1 and t_job_apply_role_type = 2 THEN 1
+                 ELSE 0 END)                                             as leaderNum
+    from t_job_apply
+    where t_job_apply_job_id = #{jobId}
+  </select>
+  <select id="selectJobs" resultType="java.util.HashMap">
+    select p.job_id jobId,
+    p.name jobName,
+    `describe` jobDescribe,
+    p.label jobLabel,
+    p.address jobAddress,
+    DATE_FORMAT(p.work_start_time, '%Y-%m-%d %H:%i:%s') jobStartTime,
+    DATE_FORMAT(p.work_end_time, '%Y-%m-%d %H:%i:%s') jobEndTime,
+    p.wages jobWage,
+    u.user_phone employerPhone,
+    p.environment_img jobUrl
+    from part_time_job p,
+    user u
+    where u.user_id = p.user_id
+    <if test="jobName !=null and jobName != ''">
+      and p.name like concat(#{jobName},'%')
+    </if>
+
+  </select>
+  <select id="selectMyJobs" resultType="java.util.HashMap">
+    select p.job_id jobId,
+    p.name jobName,
+    `describe` jobDescribe,
+    p.label jobLabel,
+    p.address jobAddress,
+    DATE_FORMAT(p.work_start_time, '%Y-%m-%d %H:%i:%s') jobStartTime,
+    DATE_FORMAT(p.work_end_time, '%Y-%m-%d %H:%i:%s') jobEndTime,
+    p.wages jobWage,
+    u.user_phone employerPhone,
+    p.environment_img jobUrl
+    from part_time_job p,
+    user u
+    where u.user_id = p.user_id and p.user_id=#{userId}
+    <if test="jobName !=null and jobName != ''">
+      and p.name like concat(#{jobName},'%')
+    </if>
+  </select>
+  <update id="closePartOrder">
+    update part_time_job
+    set status=4
+    where job_id = #{jobId}
+  </update>
+  <update id="hireWorker">
+    update t_job_apply
+    set t_job_apply_audit_status=#{status}
+    where t_job_apply_user_id = #{userId}
+      and t_job_apply_job_id = #{jobId}
+  </update>
+  <update id="setPartOrderStatus">
+    update part_time_job
+    set status =#{status}
+    where job_id = #{jobId}
+  </update>
+  <update id="updateWorkerFinishNum">
+    update user
+    set user_finish_job_count=user_finish_job_count + 1
+  </update>
+  <update id="updateWorkerApply">
+    update t_job_apply
+    set status=#{status}
+    where t_job_apply_user_id = #{userId}
+      and t_job_apply_job_id = #{jobId}
+  </update>
+  <update id="updateWorkerApplyWages">
+    update t_job_apply
+    set t_job_apply_salary =#{wages}
+    where t_job_apply_user_id = #{userId}
+      and t_job_apply_job_id = #{jobId}
+  </update>
+  <update id="addEmployerOrderNum">
+    update user
+    set total_job_order = total_job_order + 1
+    where user_id = #{userId}
+  </update>
+  <update id="addPartOrderApplyNum">
+    update part_time_job
+    set application = application + 1
+    where job_id = #{jobId}
+  </update>
+  <update id="reducePartOrderWorkerNum">
+    update part_time_job
+    set worker_number = worker_number - 1
+    where job_id = #{jobId}
+  </update>
+  <update id="addPartOrderLeaderNum">
+    update part_time_job
+    set total_team_leader_number = part_time_job.total_team_leader_number + 1
+    where job_id = #{jobId}
+  </update>
+  <update id="addPartOrderWorkerNum">
+    update part_time_job
+    set worker_number = worker_number + 1
+    where job_id = #{jobId}
+  </update>
+  <update id="updatePartOrderAmount">
+    update part_time_job
+    set amount = #{amount}
+    where job_id = #{jobId}
+  </update>
+  <update id="updateWorkerSignIn">
+    update t_job_apply
+    set t_job_apply_sign_in=DATE_FORMAT(now(), '%Y-%m-%d %H:%i:%s')
+    where t_job_apply_job_id = #{jobId}
+      and t_job_apply_user_id = #{userId}
+  </update>
+  <update id="updateWorkerSignOut">
+    update t_job_apply
+    set t_job_apply_sign_out=DATE_FORMAT(now(), '%Y-%m-%d %H:%i:%s')
+    where t_job_apply_job_id = #{jobId}
+      and t_job_apply_user_id = #{userId}
+  </update>
+  <update id="updateWorkerSignStatus">
+    update t_job_apply
+    set going_status=#{status}
+    where t_job_apply_user_id = #{userId}
+      and t_job_apply_job_id = #{jobId}
+  </update>
+</mapper>

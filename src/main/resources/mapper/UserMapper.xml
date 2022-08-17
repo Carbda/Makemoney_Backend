@@ -1,0 +1,582 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.backend.makemoney.mapper.UserMapper">
+
+  <delete id="deleteUser" parameterType="string">
+    delete
+    from user
+    where user_id = #{userId}
+  </delete>
+  <insert id="addUser">
+    INSERT into user(user_phone, user_pwd, user_nick_name, user_create_time)
+    VALUES (#{userPhone}, #{userPwd}, #{userPhone}, #{userCreateTime})
+  </insert>
+  <!--  收藏/取消收藏订单-->
+  <insert id="updateCollection">
+    insert into t_collection_table(t_collection_table_create_time, t_collection_table_user_id,
+                                   t_collection_table_job_id, t_collection_table_job_type,
+                                   t_collection_table_status)
+    values (DATE_FORMAT(now(), '%Y-%m-%d %H:%i:%s'), #{userId}, #{jobId}, #{type}, #{status})
+    ON DUPLICATE KEY UPDATE t_collection_table_status= #{status}
+  </insert>
+  <!--  获取用户兼职收藏列表-->
+  <insert id="updateResume" parameterType="com.backend.makemoney.entity.Resume">
+    insert into t_resume(resume_user_id, resume_create_time, resume_real_name, resume_sex,
+                         resume_age, resume_phone,
+                         resume_height, resume_education, resume_politics_status, resume_nation,
+                         resume_photo, resume_work_experience, resume_advantages)
+    values (#{userId}, DATE_FORMAT(now(), '%Y-%m-%d %H:%i:%s'), #{realName}, #{sex}, #{age},
+            #{phone}, #{height}, #{education},
+            #{politicsStatus}, #{nation}, #{photo}, #{workExperience}, #{advantages})
+    ON DUPLICATE KEY UPDATE resume_real_name= #{realName},
+                            resume_sex=#{sex},
+                            resume_age=#{age},
+                            resume_phone=#{phone},
+                            resume_height=#{height},
+                            resume_education=#{education},
+                            resume_politics_status=#{politicsStatus},
+                            resume_nation=#{nation},
+                            resume_photo=#{photo},
+                            resume_work_experience=#{workExperience},
+                            resume_advantages=#{advantages};
+
+  </insert>
+
+  <!--  获取用户全职收藏列表-->
+  <select id="findAll" resultType="com.backend.makemoney.entity.User">
+    select user_id                        as userId,
+           user_phone                     as userPhone,
+           user_pwd                       as userPwd,
+           user_create_time               as userCreateTime,
+           user_wallet_id                 as userWalletId,
+           user_type                      as userType,
+           user_nick_name                 as userNickName,
+           user_wechat                    as userWechat,
+           user_avatar                    as userAvatar,
+           user_status                    as userStatus,
+           user_login_ip                  as userLoginIp,
+           login_time                     as loginTime,
+           worker_growth_value            as workerGrowthValue,
+           boss_growth_value              as bossGrowthValue,
+           full_time_auth                 as fullTimeAuth,
+           team_leader_certification      as teamLeaderCertification,
+           total_follow_count             as totalFollowCount,
+           total_fans_count               as totalFansCount,
+           total_job_order                as totalJobOrder,
+           user_resume_status             as userResumeStatus,
+           user_real_name_auth            as userRealNameAuth,
+           user_Enterprise_certification  as userEnterpriseCertification,
+           user_finish_job_count          as userFinishJobCount,
+           user_current_ongoing_job_count as userCurrentOngoingJobCount,
+           user_update_time               as userUpdateTime
+    from user
+  </select>
+
+  <!--  上传用户头像-->
+  <select id="selectPartCollection" resultType="java.util.HashMap">
+    select DISTINCT p.job_id          jobId,
+                    p.user_id         userId,
+                    p.name            name,
+                    p.address         location,
+                    p.create_time     publishTime,
+                    p.work_start_time workStartTime,
+                    p.work_end_time   workEndTime,
+                    p.wages           wages,
+                    p.label           label
+    from part_time_job p,
+         t_collection_table c
+    where c.t_collection_table_user_id = #{userId}
+      and p.job_id = c.t_collection_table_job_id
+      and c.t_collection_table_status = 1
+  </select>
+
+  <!--  修改用户昵称-->
+  <select id="selectFullCollection" resultType="java.util.HashMap">
+    select DISTINCT f.job_id      jobId,
+                    f.user_id     userId,
+                    f.name        name,
+                    f.job_place   location,
+                    f.create_time publishTime,
+                    f.wages       wages,
+                    f.label       label
+    from full_time_job f,
+         t_collection_table c
+    where c.t_collection_table_user_id = #{userId}
+      and f.job_id = c.t_collection_table_job_id
+  </select>
+
+  <!--  设置登陆状态-->
+  <select id="selectResume" resultType="com.backend.makemoney.entity.Resume">
+    select resume_user_id         as userId,
+           resume_real_name       as realName,
+           resume_sex             as sex,
+           resume_age             as age,
+           resume_phone           as phone,
+           resume_height          as height,
+           resume_education       as education,
+           resume_politics_status as politicsStatus,
+           resume_nation          as nation,
+           resume_photo           as photo,
+           resume_work_experience as workExperience,
+           resume_advantages      as advantages,
+           resume_create_time     as createTime,
+           resume_update_time     as updateTime
+    from t_resume
+    where resume_user_id = #{userId}
+  </select>
+
+  <select id="selectUserList"
+    resultType="com.backend.makemoney.entity.vo.UserList">
+    SELECT user_id as userId,
+    user_phone as userPhone,
+    user_nick_name as userNickName,
+    user_create_time as userCreateTime,
+    login_time as loginTime,
+    user_status as userStatus,
+    user_type as userType
+    FROM user
+    <where>
+      <if test="userId !=null and userId !=''">
+        and user_Id like concat(#{userId},'%')
+      </if>
+      <if test="userCreateTime != null and userCreateTime != '' ">
+        and user_create_time &lt; #{userCreateTime}
+      </if>
+      <if test="userNickName != null  and userNickName != ''">
+        and user_nick_name like concat('%',#{userNickName}, '%')
+      </if>
+    </where>
+    limit #{pageNum},#{pageSize}
+  </select>
+  <!--  获取用户简历-->
+  <select id="selectUserSum" parameterType="string" resultType="integer">
+    SELECT COUNT(*)
+    FROM user
+    <where>
+      <if test="userId !=null and userId !=''">
+        and user_Id = #{userId}
+      </if>
+      <if test="userCreateTime != null and userCreateTime != '' ">
+        and user_create_time &lt; #{userCreateTime}
+      </if>
+      <if test="userNickName != null  and userNickName != ''">
+        and user_nick_name like concat('%',#{userNickName}, '%')
+      </if>
+    </where>
+  </select>
+  <select id="selectWorkerList"
+    resultType="com.backend.makemoney.entity.vo.WorkerList">
+    SELECT user_id as userId,
+    user_nick_name as userNickName,
+    (
+    CASE
+    WHEN worker_growth_value &lt; 101 THEN 'lv1'
+    WHEN (worker_growth_value > 100
+    AND worker_growth_value &lt; 201) THEN 'lv2'
+    WHEN (worker_growth_value > 200
+    AND worker_growth_value &lt; 301) THEN 'lv3'
+    WHEN (worker_growth_value > 300
+    AND worker_growth_value &lt; 401) THEN 'lv4'
+    WHEN (worker_growth_value > 400
+    AND worker_growth_value &lt; 501) THEN 'lv5'
+    WHEN (worker_growth_value > 500
+    AND worker_growth_value &lt; 601) THEN 'lv6'
+    WHEN (worker_growth_value > 600
+    ) THEN
+    'lv7'
+    END
+    ) AS workerLevel,
+    user_current_ongoing_job_count as userCurrentOngoingJobCount,
+    user_finish_job_count as userFinishJobCount,
+    user_status as userStatus,
+    (SELECT SUM(amount)
+    FROM user_wallet_detail
+    WHERE user_id = datail_associated_wallet_id
+    and type = 2
+    GROUP BY user_id) AS withdrawalAmount
+    FROM user
+    <where>
+      <if test="userId !=null and userId !=''">
+        and user_id like concat(#{userId},'%')
+      </if>
+      <if test="userCreateTime != null and userCreateTime != '' ">
+        and user_create_time &lt; #{userCreateTime}
+      </if>
+      <if test="userNickName != null  and userNickName != ''">
+        and user_nick_name like concat('%',#{userNickName}, '%')
+      </if>
+    </where>
+    limit #{pageNum},#{pageSize}
+  </select>
+  <!--  更新用户简历-->
+  <select id="selectWorkerSum" parameterType="string" resultType="integer">
+    SELECT COUNT(*)
+    FROM `user`
+    <where>
+      <if test="userId !=null and userId !=''">
+        and user_Id = #{userId}
+      </if>
+      <if test="userCreateTime != null and userCreateTime != '' ">
+        and user_create_time &lt; #{userCreateTime}
+      </if>
+      <if test="userNickName != null  and userNickName != ''">
+        and user_nick_name like concat('%',#{userNickName}, '%')
+      </if>
+    </where>
+  </select>
+
+  <select id="selectEmployerList"
+    resultType="com.backend.makemoney.entity.vo.EmployerList">
+    select user_id as userId,
+    user_nick_name as userNickName,
+    (IF(user_type = 2, '企业', '中介')) as userType,
+    (
+    CASE
+
+    WHEN boss_growth_value &lt; 101 THEN 'lv1'
+    WHEN (boss_growth_value > 100
+    AND boss_growth_value &lt; 201) THEN 'lv2'
+    WHEN (boss_growth_value > 200
+    AND boss_growth_value &lt; 301) THEN 'lv3'
+    WHEN (boss_growth_value > 300
+    AND boss_growth_value &lt; 401) THEN 'lv4'
+    WHEN (boss_growth_value > 400
+    AND boss_growth_value &lt; 501) THEN 'lv5'
+    WHEN (boss_growth_value > 500
+    AND boss_growth_value &lt; 601) THEN 'lv6'
+    WHEN (boss_growth_value > 600
+    ) THEN
+    'lv7'
+    END
+    ) AS bossGrowthValue,
+    user_finish_job_count as userFinishJobCount,
+    (SELECT COUNT(user_id)
+    FROM part_time_job
+    where user.user_id = part_time_job.user_id
+    GROUP BY user.user_id) as userCurrentOngoingJobCount,
+    (SELECT SUM(amount)
+    FROM user,
+    user_wallet_detail
+    WHERE user.user_id = user_wallet_detail.datail_associated_wallet_id and user.user_id=userId
+    AND user_wallet_detail.type = 3
+    GROUP BY user_id) AS totalPay,
+    user_status as userStatus
+    FROM `user`
+    <where>
+      <if test="userId !=null and userId !=''">
+        and user_id like concat(#{userId},'%')
+      </if>
+      <if test="userCreateTime != null and userCreateTime != '' ">
+        and user_create_time &lt; #{userCreateTime}
+      </if>
+      <if test="userNickName != null  and userNickName != ''">
+        and user_nick_name like concat('%',#{userNickName}, '%')
+      </if>
+    </where>
+    limit #{pageNum},#{pageSize}
+  </select>
+
+  <!--  设置用户简历状态-->
+  <select id="selectEmployerSum" parameterType="string" resultType="integer">
+    SELECT COUNT(*)
+    FROM `user`
+    <where>
+      <if test="userId !=null and userId !=''">
+        and user_Id = #{userId}
+      </if>
+      <if test="userCreateTime != null and userCreateTime != '' ">
+        and user_create_time &lt; #{userCreateTime}
+        and user_create_time &lt; #{userCreateTime}
+      </if>
+      <if test="userNickName != null  and userNickName != ''">
+        and user_nick_name like concat('%',#{userNickName}, '%')
+      </if>
+    </where>
+  </select>
+
+  <!--  退出登录 -->
+  <select id="selectUserByUserId" parameterType="com.backend.makemoney.entity.User"
+    resultType="com.backend.makemoney.entity.User">
+    select user_id                        as userId,
+           user_phone                     as userPhone,
+           user_pwd                       as userPwd,
+           user_create_time               as userCreateTime,
+           user_wallet_id                 as userWalletId,
+           user_type                      as userType,
+           user_nick_name                 as userNickName,
+           user_wechat                    as userWechat,
+           user_avatar                    as userAvatar,
+           user_status                    as userStatus,
+           user_login_ip                  as userLoginIp,
+           login_time                     as loginTime,
+           worker_growth_value            as workerGrowthValue,
+           boss_growth_value              as bossGrowthValue,
+           full_time_auth                 as fullTimeAuth,
+           team_leader_certification      as teamLeaderCertification,
+           total_follow_count             as totalFollowCount,
+           total_fans_count               as totalFansCount,
+           total_job_order                as totalJobOrder,
+           user_resume_status             as userResumeStatus,
+           user_real_name_auth            as userRealNameAuth,
+           user_Enterprise_certification  as userEnterpriseCertification,
+           user_finish_job_count          as userFinishJobCount,
+           user_current_ongoing_job_count as userCurrentOngoingJobCount,
+           user_update_time               as userUpdateTime
+    from user
+    where user_id = #{userId}
+  </select>
+
+  <!--  设置密码-->
+  <select id="selectUserCount" resultType="java.util.HashMap">
+    SELECT COUNT(user_id)                                                   AS total,
+           COUNT(case when (user_finish_job_count > 0) then 1 end)          as workerNum,
+           COUNT(case when (user_type = 1) then 1 end)                      as employerNum,
+           COUNT(case when (user_current_ongoing_job_count > 0) then 1 end) as intermediaryNum
+    FROM `user`
+  </select>
+  <!--  获取用户列表vo-->
+  <select id="selectWorkerCount" resultType="java.util.HashMap">
+    SELECT COUNT(CASE WHEN (worker_growth_value &lt; 101) then 1 end) as lv1,
+           COUNT(CASE
+                   WHEN (worker_growth_value > 100 and worker_growth_value &lt; 201)
+                     then 1 end)                                      as lv2,
+           COUNT(CASE
+                   WHEN (worker_growth_value > 200 and worker_growth_value &lt; 301)
+                     then 1 end)                                      as lv3,
+           COUNT(CASE
+                   WHEN (worker_growth_value > 300 and worker_growth_value &lt; 401)
+                     then 1 end)                                      as lv4,
+           COUNT(CASE
+                   WHEN (worker_growth_value > 400 and worker_growth_value &lt; 501)
+                     then 1 end)                                      as lv5,
+           COUNT(CASE
+                   WHEN (worker_growth_value > 500 and worker_growth_value &lt; 601)
+                     then 1 end)                                      as lv6,
+           COUNT(CASE WHEN (worker_growth_value > 600) then 1 end)    as lv7
+    FROM `user`;
+  </select>
+
+  <!--  获取劳工列表vo-->
+  <select id="selectEmployerCount" resultType="java.util.HashMap">
+    SELECT COUNT(CASE WHEN (boss_growth_value &lt; 101) then 1 end) as lv1,
+           COUNT(CASE
+                   WHEN (boss_growth_value > 100 and boss_growth_value &lt; 201)
+                     then 1 end)                                    as lv2,
+           COUNT(CASE
+                   WHEN (boss_growth_value > 200 and boss_growth_value &lt; 301)
+                     then 1 end)                                    as lv3,
+           COUNT(CASE
+                   WHEN (boss_growth_value > 300 and boss_growth_value &lt; 401)
+                     then 1 end)                                    as lv4,
+           COUNT(CASE
+
+                   WHEN (boss_growth_value > 400 and boss_growth_value &lt; 501)
+                     then 1 end)                                    as lv5,
+           COUNT(CASE
+                   WHEN (boss_growth_value > 500 and boss_growth_value &lt; 601)
+                     then 1 end)                                    as lv6,
+           COUNT(CASE WHEN (boss_growth_value > 600) then 1 end)    as lv7
+    FROM `user`;
+  </select>
+
+  <!--  获取招聘方列表vo-->
+  <select id="selectUserInfoZiliao" resultType="java.util.HashMap">
+    select u.user_nick_name                                     as userNickName,
+           u.worker_growth_value                                as workerGrowthValue,
+           u.boss_growth_value                                  as bossGrowthValue,
+           u.user_id                                            as userId,
+           u.user_status                                        as userStatus,
+           u.user_phone                                         as userPhone,
+           t.resume_sex                                         as userSex,
+           t.resume_real_name                                   as userRealName,
+           e.enterprise_name                                    as userEnterprise,
+           DATE_FORMAT(u.user_create_time, '%Y-%m-%d %H:%i:%s') as userCreateTime,
+           DATE_FORMAT(u.login_time, '%Y-%m-%d %H:%i:%s')       as loginTime,
+           u.user_avatar                                           avatar
+
+    from user u
+           left join t_resume t
+                     on resume_user_id = u.user_id
+           left join user_enterprise_certification e on u.user_id = e.user_id
+    where u.user_id = #{userId}
+  </select>
+  <!--  通过用户ID获取用户信息-->
+  <select id="selectUserInfoZijin" resultType="java.util.HashMap">
+    select total_amount              as balanceAmount,
+           (SELECT SUM(amount)
+            FROM user_wallet_detail,
+                 user
+            WHERE user_wallet_id = datail_associated_wallet_id
+              and type = 3
+            GROUP BY user_wallet_id) AS withdrawalAmount,
+           (SELECT SUM(amount)
+            FROM user_wallet_detail,
+                 user
+            WHERE user_wallet_id = datail_associated_wallet_id
+              and type = 1
+            GROUP BY user_wallet_id) AS rechargeAmount,
+           total_frozen_amount       as frozenAmount
+    from user
+           left join user_wallet on user_id = associated_user_id
+    where user_id = #{userId}
+  </select>
+  <!--  统计用户分布情况-->
+  <select id="selectUserInfoShejiao" resultType="java.util.HashMap">
+    select total_follow_count as followCount, total_fans_count as fansCount
+    from user
+    where user_id = #{userId}
+  </select>
+  <!--  统计劳工分布情况-->
+  <select id="selectUserInfoJiedan" resultType="java.util.HashMap">
+    select (select COUNT(t.t_job_apply_user_id)
+            from t_job_apply as t
+            where t.t_job_apply_user_id = #{userId}) as applyCount,
+           (select COUNT(t.t_job_apply_user_id)
+            from t_job_apply as t
+            where t.t_job_apply_user_id = #{userId}
+              and t.status = 3)                      as finishCount
+  </select>
+
+
+  <!--  统计招聘方分布情况-->
+  <select id="selectUserInfoFadan" resultType="java.util.HashMap">
+    select (select COUNT(p.user_id)
+            from part_time_job as p
+            where p.user_id = #{userId}) as releaseCount,
+           (select COUNT(p.user_id)
+            from part_time_job as p
+            where p.user_id = #{userId}
+              and p.status = 3)          as releaseFinshCount,
+           (SELECT SUM(amount)
+            FROM user,
+                 user_wallet_detail
+            WHERE user.user_id = user_wallet_detail.datail_associated_wallet_id
+              AND /*new*/user.user_id = #{userId}/*new*/
+              AND user_wallet_detail.type = 3
+            GROUP BY user_id)            AS checkOut
+  </select>
+
+  <!-- 用户信息卡-用户详情-用户资料 -->
+  <select id="selectUserInfoYaoqing" resultType="java.util.HashMap">
+
+  </select>
+
+  <!--  用户信息卡-用户详情-资金统计 -->
+  <select id="selectUserInfoGongsi" resultType="java.util.HashMap">
+    select enterprise_name               as enterpriseName,
+           enterprise_style              as enterpriseStyle,
+           enterprise_addr               as enterpriseAddr,
+           enterprise_legal_people       as enterpriseLegalPeople,
+           enterprise_registered_capital as enterpriseRegisteredCapital,
+           enterprise_incorporation      as enterpriseIncorporation,
+           enterprise_business_term      as enterpriseBusinessTerm,
+           enterprise_business_scope     as enterpriseBusinessScope
+    from user_enterprise_certification
+    where user_id = #{userId}
+  </select>
+
+  <!--  用户信息卡-用户详情-社交统计 -->
+  <select id="selectUserResume" resultType="java.util.HashMap">
+    select resume_user_id         userId,
+           resume_real_name       realName,
+           resume_sex             sex,
+           resume_age             age,
+           resume_phone           phone,
+           resume_height          height,
+           resume_education       education,
+           resume_politics_status politicsStatus,
+           resume_nation          nation,
+           resume_photo           photo,
+           resume_work_experience workExperience,
+           resume_advantages      advantages,
+           resume_create_time     createTime,
+           resume_update_time     updateTim
+    from t_resume
+    where resume_user_id = #{userId}
+  </select>
+
+  <!--  用户信息卡-用户详情-接单统计   逻辑待补充 -->
+  <select id="selectUserIdByPhone" resultType="string">
+    select user_id
+    from user
+    where user_phone = #{userPhone}
+  </select>
+
+  <!--  用户信息卡-用户详情-发单统计 -->
+  <select id="getTakeOrder" parameterType="integer" resultType="integer">
+    select COUNT(*)
+    from user
+    <where>
+      <if test="#{min} != null and #{min} != ''">
+        total_job_order &gt;= #{min}
+      </if>
+      <if test="#{min} != null and #{min} != ''">
+        and total_job_order &lt; #{max}
+      </if>
+    </where>
+  </select>
+
+  <!--  用户信息卡-用户详情-邀请统计 -->
+  <select id="getPublishOrder" parameterType="integer" resultType="integer">
+    select COUNT(*)
+    from user
+    <where>
+      <if test="#{min} != null and #{min} != ''">
+        user_finish_job_count &gt;= #{min}
+      </if>
+      <if test="#{min} != null and #{min} != ''">
+        and user_finish_job_count &lt; #{max}
+      </if>
+    </where>
+  </select>
+
+  <!--  用户信息卡-用户详情-公司资料 -->
+  <update id="updateUserAvatar">
+    update user
+    set user_avatar=#{url}
+    where user_id = #{userId}
+  </update>
+  <update id="updateUserNickName">
+    update user
+    set user_nick_name=#{nickName}
+    where user_id = #{userId}
+  </update>
+  <update id="setUserLogin" parameterType="String">
+    update user
+    set user_status=1
+    where user_phone = #{userPhone}
+  </update>
+  <update id="updateResumeStatus">
+    update user
+    set user_resume_status =1
+    where user_id = #{userId}
+  </update>
+
+  <update id="setUserLogout" parameterType="String">
+    update user
+    set user_status=0
+    where user_phone = #{userPhone}
+  </update>
+  <update id="setUserPassword" parameterType="String">
+    update user
+    set user_pwd=#{userPwd}
+    where user_phone = #{userPhone}
+  </update>
+  <update id="addWorkerGrowth">
+    update user
+    set worker_growth_value=worker_growth_value + #{value}
+    where user_id = #{userId}
+  </update>
+  <update id="addEmployerGrowth">
+    update user
+    set boss_growth_value=user.boss_growth_value + #{value}
+    where user_id = #{userId}
+  </update>
+  <update id="changeStatus" parameterType="string">
+    update user
+    set user_status = #{userStatus}
+    where user_id = #{userId}
+  </update>
+</mapper>

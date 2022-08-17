@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.backend.makemoney.mapper.QuestionMapper">
+  <!--  添加题目-->
+  <delete id="deleteQuestion">
+    delete
+    from t_question_option
+    where t_question_option_id = #{questionId}
+  </delete>
+  <!--  删除题目-->
+  <insert id="insertQuestion" parameterType="com.backend.makemoney.entity.Question">
+    insert into t_question_option(t_question_option_id, t_question_option_create_time,
+                                  t_question_option_question_content,
+                                  t_question_option_option_content, t_question_option_score,
+                                  t_question_option_answer)
+    VALUES (#{questionId}, DATE_FORMAT(now(), '%Y-%m-%d %H:%i:%s'), #{questionContent},
+            #{questionOptions}, #{questionScore}, #{questionAnswer})
+  </insert>
+  <!--  编辑题目-->
+  <insert id="insertTestHistory">
+    insert into t_user_answer_record(t_user_answer_record_create_time, t_user_answer_record_user_id,
+                                     t_user_answer_record_score)
+    values (DATE_FORMAT(now(), '%Y-%m-%d %H:%i:%s'),#{userId},#{score})
+  </insert>
+  <!--  查找题目列表-->
+  <select id="selectAllQuestions" resultType="com.backend.makemoney.entity.Question">
+    select t_question_option_id               questionId,
+           t_question_option_question_content questionContent,
+           t_question_option_option_content   questionOptions,
+           t_question_option_score            questionScore,
+           t_question_option_answer           questionAnswer
+    from t_question_option
+  </select>
+  <!--  得到所有题目-->
+  <select id="getQuestions" resultType="com.backend.makemoney.entity.Question">
+    select t_question_option_id questionId,
+    t_question_option_question_content questionContent,
+    t_question_option_option_content questionOptions,
+    t_question_option_score questionScore,
+    t_question_option_answer questionAnswer
+    from t_question_option
+    <where>
+        <if test="questionId !=null and questionId != '' ">
+            AND t_question_option_id like concat(#{questionId}, '%')
+        </if>
+        <if test="questionContent !=null and questionContent != '' ">
+            AND t_question_option_question_content like concat('%', #{questionContent}, '%')
+        </if>
+        <if test="questionScore !=null and questionScore != '' ">
+            AND t_question_option_score=#{questionScore}
+        </if>
+    </where>
+
+    limit #{pageNum},#{pageSize}
+  </select>
+  <!--  添加答题记录-->
+  <update id="updateQuestion">
+    update t_question_option
+    set t_question_option_question_content =#{questionContent},
+        t_question_option_option_content=#{questionOptions},
+        t_question_option_score=#{questionScore},
+        t_question_option_answer=#{questionAnswer}
+    where t_question_option_id = #{questionId}
+  </update>
+<!--  更改用户成为领队-->
+  <update id="updateUserLeader">
+    update user set team_leader_certification = 1 where user_id=#{userId}
+  </update>
+
+    <select id="getQuestionsSum" parameterType="string" resultType="integer">
+        select COUNT(*)
+        from t_question_option
+        <where>
+            <if test="questionId !=null and questionId != '' ">
+                AND t_question_option_id like concat(#{questionId}, '%')
+            </if>
+            <if test="questionContent !=null and questionContent != '' ">
+                AND t_question_option_question_content like concat('%', #{questionContent}, '%')
+            </if>
+            <if test="questionScore !=null and questionScore != '' ">
+                AND t_question_option_score=#{questionScore}
+            </if>
+        </where>
+
+    </select>
+  <select id="selectQuestionHistory" resultType="java.util.HashMap">
+    select t_user_answer_record_score score,DATE_FORMAT(t_user_answer_record_create_time, '%Y-%m-%d %H:%i:%s') answerDate from t_user_answer_record where t_user_answer_record_user_id=#{userId}
+  </select>
+</mapper>
